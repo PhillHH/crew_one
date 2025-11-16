@@ -1,54 +1,61 @@
-# Diy Crew
+# DIY (CrewAI) Paket
 
-Welcome to the Diy Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+Dieses Verzeichnis enthält den CrewAI-Workflow inklusive PDF-Tooling und wird sowohl lokal als auch im Backend-Container genutzt.
 
-## Installation
-
-Ensure you have Python >=3.10 <3.14 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
-
-First, if you haven't already, install uv:
+## 1. Installation
 
 ```bash
-pip install uv
+cd diy
+pip install -e .             # Editable install für lokale Entwicklung
+# optional:
+# uv sync                    # wenn du UV einsetzen möchtest
 ```
 
-Next, navigate to your project directory and install the dependencies:
+- Unterstützte Python-Versionen: `>=3.10, <3.14`.
 
-(Optional) Lock the dependencies and install them by using the CLI command:
+## 2. Strukturüberblick
+
+```
+src/diy/
+├── main.py          # run/train/replay/run_with_trigger
+├── crew.py          # Definition der Agents & Tasks
+├── config/
+│   ├── agents.yaml
+│   └── tasks.yaml
+└── tools/
+    ├── print/       # WeasyPrint-Konverter & Templates
+    └── custom_tool.py
+outputs/             # Generierte Markdown- & PDF-Dateien
+```
+
+## 3. Ausführung
+
 ```bash
-crewai install
-```
-### Customizing
-
-**Add your `OPENAI_API_KEY` into the `.env` file**
-
-- Modify `src/diy/config/agents.yaml` to define your agents
-- Modify `src/diy/config/tasks.yaml` to define your tasks
-- Modify `src/diy/crew.py` to add your own logic, tools and specific args
-- Modify `src/diy/main.py` to add custom inputs for your agents and tasks
-
-## Running the Project
-
-To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
-
-```bash
-$ crewai run
+python -m diy.main                   # Standardlauf mit Default-Inputs
+python -m diy.main run_with_trigger '{"project_description": "..."}'
+python -m diy.main train 5 results.json
 ```
 
-This command initializes the diy Crew, assembling the agents and assigning them tasks as defined in your configuration.
+- `run()` erzeugt Markdown (z. B. `outputs/arbeitsschritte.md`) und ruft danach `convert_report_to_pdf`.
+- `run_with_trigger` ist der Codepfad, den das FastAPI-Backend verwendet (`backend/services/crewai_service.py`).
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+## 4. PDF-Toolchain
 
-## Understanding Your Crew
+- Hauptfunktionen: `convert_markdown_to_pdf`, `convert_report_to_pdf` in `src/diy/tools/print/pdfmaker.py`.
+- Templates & Themes: `src/diy/tools/print/templates/`.
+- Dokumentation & Troubleshooting: `diy/PDF_GENERATION_GUIDE.md` + `docs/IMPLEMENTATION_SUMMARY.md`.
 
-The diy Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
+## 5. Konfiguration & Settings
 
-## Support
+- Agents/Tasks werden über `src/diy/config/*.yaml` gepflegt.
+- `diy/outputs/` dient als gemeinsames Volume mit dem Backend; alte Artefakte bei Bedarf aufräumen.
+- Relevante Environment-Variablen werden im Backend (`backend/config.py`) definiert (`crewai_working_dir`, `outputs_dir`, …).
 
-For support, questions, or feedback regarding the Diy Crew or crewAI.
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+## 6. Tipps
 
-Let's create wonders together with the power and simplicity of crewAI.
+- Bei neuen Themes CSS-Dateien unter `templates/styles/` ergänzen und im Guide dokumentieren.
+- Für Debugging `WEASYPRINT_DEBUG=1` setzen, um WeasyPrint-Logs zu erweitern.
+- Vor Deployments sicherstellen, dass `pip install -e .` auf dem Zielsystem ausgeführt wurde (oder das Paket via Wheel installieren).
+
+Weitere Kontextinfos: `docs/README_FULLSTACK.md`, `architektur.md`.
+

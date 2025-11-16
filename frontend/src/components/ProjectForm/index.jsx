@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
@@ -31,7 +31,7 @@ const STEP_FIELDS = [
   ['name', 'email', 'phone'],
 ];
 
-export default function ProjectForm({ onSubmit }) {
+export default function ProjectForm({ onSubmit, prefilledData = null }) {
   const [currentStep, setCurrentStep] = useState(0);
 
   const {
@@ -49,6 +49,15 @@ export default function ProjectForm({ onSubmit }) {
     mode: 'onChange',
     reValidateMode: 'onBlur',
   });
+
+  useEffect(() => {
+    if (prefilledData) {
+      reset({
+        ...DEFAULT_VALUES,
+        ...prefilledData,
+      });
+    }
+  }, [prefilledData, reset]);
 
   const steps = useMemo(() => ([
     {

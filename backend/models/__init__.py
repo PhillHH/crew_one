@@ -6,6 +6,15 @@ from .schemas import (
     DIYRequest,
     DIYResponse,
 )
+from .intake import (
+    DIYRequirement,
+    DIYRequirementDraft,
+    IntakeTurn,
+    IntakeChatRequest,
+    IntakeChatUpdate,
+    IntakeFinalizeRequest,
+    IntakeFinalizeResponse,
+)
 
 __all__ = [
     "ExperienceLevel",
@@ -14,5 +23,12 @@ __all__ = [
     "ContactInfo",
     "DIYRequest",
     "DIYResponse",
+    "DIYRequirement",
+    "DIYRequirementDraft",
+    "IntakeTurn",
+    "IntakeChatRequest",
+    "IntakeChatUpdate",
+    "IntakeFinalizeRequest",
+    "IntakeFinalizeResponse",
 ]
 

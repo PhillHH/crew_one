@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
-from backend.routers import diy
+from backend.routers import diy, intake
 from backend.database import init_db
 
 # Configure logging
@@ -52,6 +52,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(diy.router)
+app.include_router(intake.router)
 
 
 @app.get("/")

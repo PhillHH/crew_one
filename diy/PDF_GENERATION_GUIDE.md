@@ -4,6 +4,8 @@
 
 Das PDF-Generierungssystem wurde komplett auf **WeasyPrint** umgestellt für professionelles, CSS3-basiertes Styling.
 
+> Für eine chronologische Zusammenfassung der Migration siehe `docs/IMPLEMENTATION_SUMMARY.md`. In diesem Guide geht es ausschließlich um Bedienung und Erweiterung.
+
 ## Architektur
 
 ```

@@ -1,308 +1,174 @@
-# DIY CrewAI - Full Stack Application
+# DIY CrewAI – Betriebs- & Skalierungsdokumentation
 
-## 🎯 Überblick
+> **Zielgruppe:** Entwickler:innen & DevOps, die das Projekt übernehmen oder horizontal skalieren wollen.  
+> **Single Source of Truth:** Dieses Dokument beschreibt den Gesamtverbund. Spezialthemen werden über die Dokumentationsmatrix am Ende verlinkt.
 
-Eine vollständige Web-Anwendung mit React-Frontend und FastAPI-Backend, die KI-gestützte DIY-Anleitungen generiert.
+## 1. TL;DR – Was ist produktiv?
 
-### Features
+- **Frontend:** React + Vite + Tailwind (`frontend/`), Multi-Step-Formular **oder** AI-Intake-Chat (`frontend/src/components/IntakeChat/IntakeChat.tsx`), ruft die Backend-API via `frontend/src/services/api.js` bzw. `frontend/src/services/intake.ts` auf.
+- **Backend:** FastAPI (`backend/`), orchestriert CrewAI-Aufrufe, Intake-Agent (`/intake/...`), verschickt E-Mails und verwaltet Support-Requests.
+- **CrewAI-Paket:** Python (`diy/src/diy/`), generiert Markdown-Reports und PDFs (WeasyPrint).
+- **Persistenz:** PostgreSQL (Docker-Service `db`), Datei-Ausgaben unter `diy/outputs/`.
+- **Container-Orchestrierung:** `docker-compose.yml` (lokal & als Vorlage für Deployment).
 
-✅ **React Frontend** - Multi-Step-Formular für Projektbeschreibung  
-✅ **FastAPI Backend** - REST API mit CrewAI-Integration  
-✅ **PostgreSQL** - Speicherung von Support-Anfragen  
-✅ **E-Mail-Service** - Automatischer Versand der PDFs  
-✅ **PDF-Generierung** - WeasyPrint mit professionellem Styling  
-✅ **Docker Compose** - Alle Services orchestriert  
+## 2. Architektur & Verantwortlichkeiten
 
-## 🏗️ Architektur
+Die Ordnerstruktur ist in `architektur.md` aufgearbeitet; dort finden sich ebenfalls die aufgeräumten Pfade. Kurzüberblick:
 
 ```
 crew_one/
-├── frontend/          # React + Vite + Tailwind CSS
-├── backend/           # FastAPI + SQLAlchemy + PostgreSQL
-├── diy/               # CrewAI (bestehend)
-├── docker-compose.yml # Orchestrierung aller Services
-└── nginx.conf         # Reverse Proxy
+├── frontend/      # React-App + Tailwind
+├── backend/       # FastAPI + Dienste
+├── diy/           # CrewAI + PDF-Tooling
+├── docs/          # Diese Dokumente
+└── docker-compose.yml
 ```
 
-## 🚀 Quick Start
+| Ebene | Zuständig | Kern-Dateien |
+| --- | --- | --- |
+| Frontend | Formular, UX | `frontend/src/App.jsx`, `frontend/src/components/*`, `frontend/src/utils/validation.js`, `frontend/src/components/IntakeChat/IntakeChat.tsx` |
+| Backend | REST-API, CrewAI- & Intake-Trigger, Support | `backend/main.py`, `backend/routers/diy.py`, `backend/routers/intake.py`, `backend/services/*.py` |
+| CrewAI | Agentenlauf, PDF-Erstellung | `diy/src/diy/main.py`, `diy/src/diy/crew.py`, `diy/src/diy/tools/print/pdfmaker.py` |
 
-### Prerequisites
+### Laufzeitfluss (Happy Path)
 
-- Docker & Docker Compose
-- Node.js 20+ (für lokale Development)
-- Python 3.11+ (für lokale Development)
+**Variante A – Formular (unverändert)**
 
-### 1. Environment Setup
+1. Nutzer:in füllt das Formular im Frontend aus (`generateDIYReport` in `frontend/src/services/api.js`).
+2. `POST /api/generate` landet im Backend-Router `backend/routers/diy.py`, der Inputs validiert und `generate_diy_report` startet.
+3. Das Service `backend/services/crewai_service.py` wechselt in das CrewAI-Verzeichnis, führt `diy.main.run()` aus und wartet auf neue PDFs in `diy/outputs/`.
+4. Der Backend-Response liefert `file_id`, Download-Link und optional Support-IDs an das Frontend zurück.
+5. Das Frontend zeigt das Ergebnis in `SuccessModal` an und lädt das PDF herunter.
 
-```bash
-# Kopiere .env.example zu .env (bereits in FRONTEND_IMPLEMENTATION_GUIDE.md)
-# und fülle SMTP-Credentials aus
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_FROM_EMAIL=your-email@gmail.com
+**Variante B – Intake-/Scoping-Agent**
+
+1. Nutzer:in aktiviert den Toggle „Ich brauche Hilfe …“, wodurch `frontend/src/components/IntakeChat/IntakeChat.tsx` einen SSE-Stream mit `/intake/chat/stream` startet.
+2. Das Backend ruft `backend/services/intake_service.py` (Standardmodell `gpt-4o-mini`, über `OPENAI_MODEL` konfigurierbar) auf, streamt Antworten tokenweise und füllt ein `DIYRequirementDraft`.
+3. Der Agent bündelt maximal drei Dialogrunden, stellt mehrere thematisch passende Fragen pro Antwort, fasst zusammen und erstellt danach einen vollständigen Vorschlag. Zwei kurze Refinement-Runden sind möglich, danach fordert ALVA eine finale Bestätigung.
+4. Der Vorschlag erscheint im rechten Panel und kann entweder
+   - ins Formular übernommen und dort editiert werden (klassischer Flow mit `POST /api/generate`) oder
+   - direkt finalisiert werden (`POST /intake/finalize` → CrewAI/PDF).
+5. Beide Wege enden im bestehenden Success-/Error-Flow inklusive PDF-Download bzw. E-Mail-Hinweisen.
+
+```33:70:backend/services/crewai_service.py
+process = await asyncio.create_subprocess_exec(
+    "python", "-c", python_code, json.dumps(payload),
+    cwd=str(crewai_dir), stdout=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE
+)
+# stdout/stderr werden ins Logging übernommen; Fehler werfen Exceptions
 ```
 
-### 2. Frontend Dependencies installieren
+## 3. Lokales Setup (mit Kommentaren)
 
 ```bash
-cd frontend
-npm install
-cd ..
-```
+# 1) Abhängigkeiten installieren
+npm install --prefix frontend      # Frontend libs
+pip install -r backend/requirements.txt  # Backend (uvicorn etc.)
+pip install -e diy                 # CrewAI-Paket (entwicklungsmodus)
 
-### 3. Alle Services starten
+# 2) Umgebungsvariablen setzen (SMTP muss für PDF-Mailversand gefüllt sein)
+cp .env.example .env
+echo "SMTP_USER=dein-mail@smtp" >> .env
+echo "OPENAI_API_KEY=sk-..." >> .env   # Intake-Agent
+# optional: OPENAI_MODEL=gpt-4o-mini (default)
 
-```bash
-# Build und Start
+# 3) Container starten – erzeugt auch PostgreSQL & bindet diy/outputs ein
 docker compose up --build
 
-# Im Hintergrund
-docker compose up -d --build
+# 4) Frontend im Dev-Mode (optional für HMR)
+npm run dev --prefix frontend      # lauscht auf http://localhost:5173
 ```
 
-### 4. Zugriff
+> **Hinweis:** `docker-compose.yml` mountet das komplette Repo nach `/app`, das Backend konsumiert `./diy` innerhalb des Containers direkt als Modul. Änderungen an `diy/` wirken ohne rebuild.
 
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8000
-- **API Docs:** http://localhost:8000/docs (Swagger UI)
-- **PostgreSQL:** localhost:5432
-
-## 📦 Services
-
-### Frontend (Port 3000)
-- **Tech Stack:** React 18, Vite, Tailwind CSS
-- **Features:** Multi-Step-Form, Validation (Zod), API-Integration (Axios)
-- **Container:** Nginx (Production Build)
-
-### Backend (Port 8000)
-- **Tech Stack:** FastAPI, SQLAlchemy, Pydantic
-- **Features:** 
-  - `/api/generate` - PDF-Generierung
-  - `/api/download/{id}` - PDF-Download
-  - `/api/support` - Support-Anfrage erstellen
-  - `/api/health` - Health Check
-- **Validierung:** E-Mail, Telefon (DE-Format), Form-Constraints
-
-### Database (Port 5432)
-- **PostgreSQL 16**
-- **Tables:** support_requests
-- **Connection:** `postgresql://diy_user:diy_password@db:5432/diy`
-
-### CrewAI
-- **Bestehender Service** - Generiert DIY-Reports
-- **Integration:** Über Python-Subprocess vom Backend
-
-## 🛠️ Development
-
-### Frontend Development
-
-```bash
-cd frontend
-npm install
-npm run dev  # http://localhost:5173
-```
-
-### Backend Development
-
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload  # http://localhost:8000
-```
-
-### Database Migrations
-
-```bash
-# Zugriff zur DB
-docker exec -it diy_db psql -U diy_user -d diy
-
-# Tabellen anzeigen
-\dt
-
-# Support-Requests anzeigen
-SELECT * FROM support_requests;
-```
-
-## 📝 API Dokumentation
-
-### POST `/api/generate`
-
-**Request:**
-```json
-{
-  "project_description": "Eine Wand tapezieren...",
-  "experience_level": "beginner",
-  "delivery_options": {
-    "download": true,
-    "email": true
-  },
-  "support_options": {
-    "phone_support": true,
-    "onsite_support": false,
-    "location": null
-  },
-  "contact": {
-    "name": "Max Mustermann",
-    "email": "max@example.com",
-    "phone": "+4915112345678"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "PDF wurde erfolgreich erstellt",
-  "pdf_url": "/api/download/abc123def456",
-  "file_id": "abc123def456",
-  "support_request_id": "SR-12345",
-  "email_sent": true
-}
-```
-
-## 🔒 Sicherheit
-
-### Aktuelle Implementation:
-- CORS aktiviert für localhost
-- File-IDs sind zufällige UUIDs
-
-### Production Empfehlungen:
-- [ ] HTTPS (Let's Encrypt)
-- [ ] Rate Limiting
-- [ ] JWT Authentication
-- [ ] Zeitlimitierte Download-Links
-- [ ] SMTP über sichere Provider (SendGrid/Mailgun)
-- [ ] Environment-Variables verschlüsseln
-- [ ] SQL-Injection Protection (SQLAlchemy ORM ✅)
-- [ ] Input Validation (Pydantic ✅)
-
-## 🐛 Troubleshooting
-
-### Backend startet nicht
-```bash
-# Logs prüfen
-docker compose logs backend
-
-# Häufige Probleme:
-# - Database nicht ready → Wait for health check
-# - SMTP-Credentials fehlen → .env prüfen
-```
-
-### Frontend kann Backend nicht erreichen
-```bash
-# Network prüfen
-docker network inspect crew_one_diy-network
-
-# Proxy-Konfiguration prüfen
-docker exec -it diy_frontend cat /etc/nginx/conf.d/default.conf
-```
-
-### PDF wird nicht generiert
-```bash
-# CrewAI-Logs prüfen
-docker compose logs crewai
-
-# Outputs-Verzeichnis prüfen
-docker exec -it crewai_container ls -la /app/diy/outputs/
-```
-
-### E-Mail wird nicht versendet
-```bash
-# SMTP-Logs prüfen
-docker compose logs backend | grep -i smtp
-
-# Gmail: App-Passwort verwenden (nicht reguläres Passwort!)
-# https://support.google.com/accounts/answer/185833
-```
-
-## 📊 Monitoring
-
-### Health Checks
-
-```bash
-# Backend
-curl http://localhost:8000/api/health
-
-# Database
-docker exec diy_db pg_isready -U diy_user
-
-# Alle Services
-docker compose ps
-```
-
-### Logs
-
-```bash
-# Alle Services
-docker compose logs -f
-
-# Nur Backend
-docker compose logs -f backend
-
-# Nur Frontend
-docker compose logs -f frontend
-```
-
-## 🚢 Deployment
-
-### Production Build
-
-```bash
-# Build für Production
-docker compose -f docker-compose.prod.yml up -d --build
-
-# Mit Environment-Variablen
-SMTP_USER=prod@example.com SMTP_PASSWORD=xxx docker compose up -d
-```
-
-### Cloud Deployment
-
-**Empfohlene Plattformen:**
-- **Frontend:** Vercel / Netlify
-- **Backend:** AWS ECS / DigitalOcean App Platform
-- **Database:** AWS RDS / DigitalOcean Managed PostgreSQL
-- **SMTP:** SendGrid / Mailgun (10k+ E-Mails/Monat)
-
-## 📚 Weitere Dokumentation
-
-- `FRONTEND_IMPLEMENTATION_GUIDE.md` - Frontend-Komponenten-Details
-- `PDF_GENERATION_GUIDE.md` - WeasyPrint PDF-Styling
-- `IMPLEMENTATION_SUMMARY.md` - WeasyPrint Migration
-
-## 🤝 Contributing
+## 4. Service-Details
 
 ### Frontend
-
-Fehlende Komponenten (siehe `FRONTEND_IMPLEMENTATION_GUIDE.md`):
-- Hero.jsx
-- ProjectForm/* (alle Steps)
-- LoadingModal.jsx
-- SuccessModal.jsx
-- ErrorModal.jsx
-- App.jsx
-- main.jsx
+- Komponentenbaum und Zustandslogik siehe `docs/FRONTEND_IMPLEMENTATION_GUIDE.md`.
+- Validierung via Zod (`frontend/src/utils/validation.js`) spiegelt 1:1 das Backend-Schema, inkl. Pflichtfelder für Kontakt.
+- AI-Intake-Modus:
+  - Toggle/State in `frontend/src/App.jsx`
+  - `frontend/src/components/IntakeChat/IntakeChat.tsx` bündelt maximal drei Runden, zeigt Vorschläge im rechten Panel, erlaubt zwei Refinement-Schleifen und bietet Buttons für „ins Formular übernehmen“ oder „direkt finalisieren“.
+  - Typisierte API-Wrapper (`frontend/src/services/intake.ts`) kapseln SSE-Handling + optionalen Finalize-Call.
+- To-do-Liste für UI-Optimierungen ist im Guide dokumentiert (z. B. visuelle Tests, responsives Verhalten).
 
 ### Backend
+- FastAPI-App in `backend/main.py` bindet DIY- sowie Intake-Router und initialisiert DB + CORS.
 
-Erweiterungen:
-- [ ] Admin-Dashboard für Support-Anfragen
-- [ ] WebSocket für Real-Time-Updates
-- [ ] PDF-Preview vor Download
-- [ ] Multi-Language Support
-- [ ] Payment-Integration (für Premium-Support)
+```36:55:backend/main.py
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, ...)
+app.include_router(diy.router)       # klassische PDF-Generierung
+app.include_router(intake.router)    # Intake-Chat (Streaming + Finalize)
+```
 
-## 📄 License
+- Settings (`backend/config.py`) lesen die Pfade für CrewAI (`/app/diy`) und Outputs (`/app/diy/outputs`), damit Container und lokale Entwicklung identisch funktionieren.
+- Neue Settings: `OPENAI_API_KEY` (für `backend/services/intake_service.py`).
 
-MIT
+### Intake-/Scoping-Agent (Backend Detail)
 
-## 👥 Team
+- Modelle: `backend/models/intake.py` enthält `DIYRequirementDraft`, die finale `DIYRequirement`-Pydantic-Struktur sowie DTOs für Chat/Finalize.
+- Service: `backend/services/intake_service.py` definiert den Systemprompt (ALVA), erzwingt JSON (`response_format=json_object`), validiert jeden Schritt via Pydantic und liefert `is_complete` + Draft/Fertig-Objekt zurück.
+- Router:
+  - `POST /intake/chat/stream` – StreamingResponse (SSE) mit Chat-Deltas, Draft-Snapshot und Status (inkl. optionalem finalem Requirement).
+  - `POST /intake/finalize` – validiert Draft, erzeugt PDF via CrewAI und (optional) E-Mail/Support.
 
-DIY CrewAI Team - KI-gestützte Heimwerker-Anleitungen
+### CrewAI / PDF
+- Einstieg `diy/src/diy/main.py`: ruft `Diy().crew().kickoff()` mit den Formularparametern auf und triggert `convert_report_to_pdf(...)`.
+- PDF-Generierung ist in `diy/src/diy/tools/print/pdfmaker.py` gekapselt; Details stehen in `diy/PDF_GENERATION_GUIDE.md`.
 
----
+## 5. Skalierung & Betrieb
 
-**Status:** Backend ✅ | Frontend 🚧 80% | Integration ✅ | Docker ✅
+| Ebene | Tuning | Hinweise |
+| --- | --- | --- |
+| Backend | Uvicorn-Worker skalieren, Celery/Background Tasks für lange PDF-Jobs | Aktuell blockiert `generate_diy_report` bis CrewAI fertig ist. Für horizontale Skalierung am besten Worker queue einziehen. |
+| CrewAI | Separate Worker-Container oder Kubernetes-Jobs | `settings.crewai_working_dir` zeigt derzeit auf `/app/diy`; bei mehreren Arbeitsknoten sollten Outputs in ein Shared Volume. |
+| Frontend | Build auf CDN (z. B. Vercel) deployen | API-URL über `VITE_API_URL` setzen. |
+| Datenbank | Postgres-Managed Service | Migrationstool noch nicht integriert; DDL liegt implizit in SQLAlchemy-Models. |
 
-**Version:** 1.0.0
+Monitoring & Troubleshooting (Auszug):
+
+```bash
+docker compose logs backend         # API-Fehler / SMTP
+docker compose logs crewai          # CrewAI-Läufe + PDF-Erstellung
+docker exec -it diy_db psql ...     # Datenbank prüfen
+curl http://localhost:8000/api/health  # Healthcheck
+```
+
+## 6. Sicherheit & Compliance
+
+- CORS akzeptiert aktuell nur die in `backend/config.py` definierte Originliste (lokal + Container).
+- Tokens/Auth fehlen bewusst, weil es ein interner Prototyp ist. Für Produktivbetrieb sollten ergänzt werden:
+  - OAuth/JWT für `/api/generate`
+  - Signierte Download-Links
+  - Rate Limiting (FastAPI-Middleware oder API-Gateway)
+- Secrets verwalten: `.env` wird lokal genutzt; in Cloud-Deployments auf Secrets Manager wechseln.
+
+## 7. Dokumentationsmatrix
+
+| Dokument | Zweck |
+| --- | --- |
+| `docs/README_FULLSTACK.md` (dies) | Gesamtarchitektur, Betrieb, Skalierung |
+| `architektur.md` | Schneller Überblick über Verzeichnisstruktur & Duplikat-Bereinigung |
+| `docs/FRONTEND_IMPLEMENTATION_GUIDE.md` | Komponentenarchitektur, Stilrichtlinien, UI-Backlog |
+| `docs/IMPLEMENTATION_SUMMARY.md` | Kurzchronik wichtiger Implementierungs-Meilensteine (z. B. WeasyPrint) |
+| `diy/PDF_GENERATION_GUIDE.md` | Tiefgehender Leitfaden für PDF-/Template-Entwicklung |
+| `frontend/README.md`, `backend/README.md`, `diy/README.md` | Feingranulare Befehle/Envs für jedes Teilprojekt |
+
+## 8. Contribution & Roadmap
+
+- **Frontend:** Fokus auf Validierungen, Progress-Anzeige, Tests (React Testing Library), Accessibility.
+- **Backend:** Background-Processing, Observability (OpenTelemetry), Payment/Support-Erweiterungen.
+- **CrewAI:** Prompt-/Agentenpflege, alternative Themes, Mehrsprachigkeit.
+
+```bash
+# Git-Workflow (Kommentarzeilen beschreiben die Schritte)
+git checkout -b feature/<kurzbeschreibung>   # Feature-Branch anlegen
+pnpm/vite/npm test                           # (Frontend) Tests ausführen
+pytest/ruff (optional)                       # Falls Backend-Tests ergänzt wurden
+git commit -am "feat: <beschreibung>"        # Commit mit Conventional Commits
+```
+
+Bleibende Fragen? → Siehe `docs/FRONTEND_IMPLEMENTATION_GUIDE.md` für UI, `diy/PDF_GENERATION_GUIDE.md` für WeasyPrint oder kontaktiere das Team per Slack/GitHub.
 

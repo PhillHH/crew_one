@@ -1,16 +1,54 @@
-# React + Vite
+# Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Dieses README bündelt alle projektspezifischen Infos für das React-Frontend.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install                   # Dependencies
+cp ../.env.example .env.local # optional: eigene VITE_API_URL setzen
+```
 
-## React Compiler
+- Standard-API-URL: `http://localhost:8000`.  
+- Im Deployment übergibt `docker-compose` die API via Nginx (`frontend/Dockerfile`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Befehle
 
-## Expanding the ESLint configuration
+```bash
+npm run dev        # HMR auf http://localhost:5173
+npm run build      # Produktionsbundle (-> dist/)
+npm run preview    # Vorschau des gebauten Bundles
+npm run lint       # ESLint (optional aktivieren)
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+> **Kommentar:** Tailwind nutzt JIT. Wenn neue Pfade auftauchen, `tailwind.config.js` → `content` erweitern.
+
+## Struktur
+
+```
+src/
+├── App.jsx                  # Einstieg, orchestriert Request-Flow
+├── components/
+│   ├── Hero.jsx
+│   ├── ProjectForm/...
+│   ├── LoadingModal.jsx
+│   ├── SuccessModal.jsx
+│   └── ErrorModal.jsx
+├── services/api.js          # axios-Instanz + Helper
+├── utils/validation.js      # Zod-Schema + Transform
+└── styles/globals.css       # Gemeinsame Utility-Klassen
+```
+
+## Entwicklungshinweise
+
+- Formvalidierung: `react-hook-form` + `zodResolver`. Anpassungen immer im Schema vornehmen.
+- Responses vom Backend liefern `pdf_url`, `file_id`, `email_sent`, `support_request_id`. Der `SuccessModal` zeigt alle Felder an.
+- Fehlerhandling: `generateDIYReport` wirft Exceptions → `App.jsx` setzt `errorMessage` und öffnet `ErrorModal`.
+
+## Qualität & Backlog
+
+- Tests: React Testing Library + Cypress/Playwright (noch offen).
+- Accessibility: Fokus, ARIA-Labels, Tastaturnavigation prüfen.
+- i18n: Strings derzeit deutsch; bei Bedarf in Dictionary auslagern.
+
+Für tiefergehende Details siehe `docs/FRONTEND_IMPLEMENTATION_GUIDE.md` und `docs/README_FULLSTACK.md`.
