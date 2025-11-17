@@ -1,83 +1,128 @@
 # Backend (FastAPI)
 
-Dieses Dokument beschreibt Setup, Befehle und Besonderheiten des FastAPI-Backends.
+Backend-Handbuch für API, Intake-Agent und CrewAI-Anbindung.
 
-## 1. Voraussetzungen
+---
 
-- Python 3.11
-- Poetry/Pip (Projekt nutzt plain `requirements.txt`)
-- Laufende PostgreSQL-Instanz (lokal per `docker compose`)
-- Zugriff auf das CrewAI-Verzeichnis (`../diy`)
+## 1. Stack & Voraussetzungen
 
-## 2. Installation & lokale Ausführung
+- Python 3.11  
+- `pip install -r requirements.txt` (plain Requirements, kein Poetry)  
+- PostgreSQL (über `docker compose` verfügbar)  
+- Zugriff auf `../diy` (CrewAI-Paket)  
+- OpenAI-Key für den Intake-Agenten
+
+---
+
+## 2. Starten & Befehle
 
 ```bash
-pip install -r requirements.txt          # Dependencies
-uvicorn main:app --reload --port 8000    # Dev-Server
+# Lokal (mit Hot Reload)
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 
-# oder über docker compose
-docker compose up backend
+# Docker
+docker compose up backend    # startet backend + abhängige Dienste
 ```
 
-> **Hinweis:** Beim lokalen Start müssen die Env-Variablen (siehe unten) gesetzt sein – zumindest `DATABASE_URL` und die SMTP-Credentials, wenn E-Mails versendet werden sollen.
+Backend lauscht standardmäßig auf `http://localhost:8000` und akzeptiert Anfragen vom Frontend (`VITE_API_URL`).  
 
-## 3. Wichtige Dateien
+---
 
-- `main.py` – erstellt FastAPI-App, bindet Router und initiiert DB.
-- `routers/diy.py` – stellt `/api/generate`, `/api/download/{id}`, `/api/support`, `/api/health`.
-- `services/crewai_service.py` – ruft CrewAI auf, wartet auf PDFs, liefert `file_id` zurück.
-- `models/schemas.py` – `DIYRequest`, `DIYResponse`, `DeliveryOptions`, ...
-- `services/email_service.py` – verschickt PDFs/Status-Mails.
-- `services/support_service.py` – persistiert Support-Anfragen in PostgreSQL.
+## 3. Kernmodule & Verantwortlichkeiten
+
+| Datei / Verzeichnis | Zweck |
+| --- | --- |
+| `main.py` | FastAPI-App, Lifespan-Hooks (DB-Init, Logging, CORS). |
+| `routers/diy.py` | Klassische Formular-Pipeline (`/api/generate`, `/api/download/{file_id}`, `/api/health`). |
+| `routers/intake.py` | Intake-Agent via SSE (`/intake/chat/stream`) + Finalisierung (`/intake/finalize`). |
+| `services/intake_service.py` | OpenAI-Client, Prompt, Draft-Verwaltung, JSON-Parsing mit Fallbacks. |
+| `services/crewai_service.py` | Übergibt Requests an `diy/`, wartet auf PDFs, liefert `file_id`. |
+| `services/email_service.py` / `support_service.py` | E-Mail-Versand und Support-Request-Persistenz. |
+| `models/schemas.py` & `models/intake.py` | Pydantic-Schemas für Formular + Intake. |
+
+---
 
 ## 4. Environment-Variablen
 
-| Variable | Beschreibung | Beispiel |
+| Variable | Beschreibung | Pflicht |
 | --- | --- | --- |
-| `DATABASE_URL` | SQLAlchemy-URL | `postgresql://diy_user:diy_password@db:5432/diy` |
-| `SMTP_HOST`, `SMTP_PORT` | Mailserver | `smtp.gmail.com`, `587` |
-| `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` | Zugangsdaten | siehe `.env.example` |
-| `CREWAI_WORKING_DIR` | Pfad zu `diy/` (Standard `/app/diy` im Container) | `../diy` lokal |
-| `OUTPUTS_DIR` | Ablage der PDFs | `../diy/outputs` |
-| `DOWNLOADS_DIR` | Temp-Verzeichnis für ZIP/Downloads | `backend/downloads` (wird bei Bedarf erstellt) |
+| `DATABASE_URL` | Postgres-URL | ✅ |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` | Mailversand (Success-Flow) | optional |
+| `OPENAI_API_KEY` | Intake-Agent (Chat + Finalize) | ✅ für Intake |
+| `OPENAI_MODEL` | Default `gpt-4o-mini` | optional |
+| `CREWAI_WORKING_DIR` | Pfad zu `diy/` (Container: `/app/diy`) | ✅ |
+| `OUTPUTS_DIR`, `DOWNLOADS_DIR` | Artefakt-Ablage | Default vorhanden |
 
-## 5. CrewAI-Integration
+`.env.example` enthält Beispielwerte; über `docker compose` werden die Variablen automatisch injiziert.
 
-```33:101:backend/services/crewai_service.py
-crewai_dir = Path(settings.crewai_working_dir)  # default: /app/diy
-outputs_dir = Path(settings.outputs_dir)        # -> diy/outputs
-file_id = uuid.uuid4().hex[:12]
-process = await asyncio.create_subprocess_exec("python", "-c", python_code, json.dumps(payload), ...)
+---
+
+## 5. API-Überblick
+
+| Endpoint | Beschreibung |
+| --- | --- |
+| `POST /api/generate` | Klassischer Formular-Flow → CrewAI → PDF/Support/E-Mail. |
+| `GET /api/download/{file_id}` | Blob-Download, wird vom Frontend über `fetch` geladen. |
+| `GET /api/health` | Healthcheck (genutzt von Frontend & Compose). |
+| `POST /intake/chat/stream` | Server-Sent-Events für den Intake-Chat (Tokens, Draft, Status). |
+| `POST /intake/finalize` | Validiert `DIYRequirementDraft`, erzeugt PDF + Support + Mails. |
+
+**Intake-Streaming:** Das Backend liefert SSE-Chunks mit Typen `message`, `draft`, `status`, `error`. Fehlende oder fehlerhafte JSON-Antworten der OpenAI-API werden protokolliert und via Fallback abgefedert (`parse_agent_json`).  
+
+---
+
+## 6. CrewAI-Integration
+
+```python
+# backend/services/crewai_service.py (Auszug)
+process = await asyncio.create_subprocess_exec(
+    "python", "-c", python_code, json.dumps(payload),
+    cwd=str(crewai_dir), stdout=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE,
+)
 latest_pdf = max(outputs_dir.glob("*.pdf"), key=lambda p: p.stat().st_mtime)
 return latest_pdf, file_id
 ```
 
-- Das Backend wartet synchron, bis CrewAI den Lauf beendet hat. Für längere Jobs empfiehlt sich ein Background Worker / Task Queue.
-- Das PDF wird nach dem Lauf nach `downloads_dir` kopiert und kann über `/api/download/{file_id}` abgeholt werden.
+- Läuft synchron; für lange Jobs ist eine Task-Queue (Celery, Dramatiq) vorgesehen.  
+- PDFs landen sowohl im gemeinsamen Volume `diy/outputs/` als auch als Kopie (`downloads_dir`).  
+- Download-Endpunkt liefert die Dateien unter einem neutralen Namen aus (`diy_anleitung_<file_id>.pdf`).
 
-## 6. Datenbank
+---
 
-- Einziger Persistenzfall ist aktuell die Support-Anfrage (`support_requests`).
-- DB-Zugriff erfolgt via SQLAlchemy Session Helpers (`backend/database/db.py`).
-- Migrationen sind noch nicht automatisiert – Änderungen an Modellen bitte dokumentieren und SQL-Skripte bereitstellen.
+## 7. Datenbank & Support
 
-## 7. Health & Monitoring
+- Aktuell nur Tabelle `support_requests`. geschrieben via `create_support_request()` (SQLAlchemy).  
+- Migrations-Tool steht noch aus → Änderungen bitte dokumentieren und SQL-Skripte beilegen.  
+- Zugriff im Container: `docker exec -it diy_db psql -U diy_user -d diy`.
+
+---
+
+## 8. Monitoring & Debugging
 
 ```bash
 curl http://localhost:8000/api/health          # Healthcheck
-docker compose logs backend                    # API-Logs
-docker compose logs crewai                     # CrewAI/PDF-Logs
-docker exec -it diy_db psql -U diy_user -d diy # DB-Inspektion
+docker compose logs backend                    # API-Logs (inkl. Intake)
+docker compose logs crewai                     # CrewAI/PDF-Erstellung
+docker compose logs frontend                   # Proxy/HMR
 ```
 
-## 8. Tests & TODOs
+- Intake-spezifische Fehler loggen sowohl den Roh-Response als auch einen freundlichen Fehler für das Frontend.  
+- PDF-Probleme tauchen im `crewai`-Service auf (WeasyPrint-Logs).  
+- SMTP/Support-IDs werden im `backend`-Log (`DIY request processed successfully`) ausgegeben.
 
-- Aktuell keine automatisierten Tests vorhanden.
-- Nächste Schritte:
-  - Background Tasks für CrewAI (z. B. Celery, Dramatiq)
-  - Retry/Timeout-Strategie im `crewai_service`
-  - Umfangreicheres Input-Rate-Limiting / Auth
-  - Unit-Tests für Services (Mock von CrewAI)
+---
 
-Weitere Details zur Gesamtarchitektur: `docs/README_FULLSTACK.md`.
+## 9. Tests, Qualität & Roadmap
+
+| Thema | Status | To-dos |
+| --- | --- | --- |
+| Unit-/Integrationstests | rudimentär | FastAPI-TestClient für `/api/generate`, Mock von CrewAI/OpenAI |
+| Intake-Robustheit | JSON-Fallback vorhanden | weitere Guards (max Tokens, Rate Limits) |
+| Hintergrundjobs | nicht vorhanden | Worker/Queue für lange PDF-Läufe |
+| Observability | Logging vorhanden | OpenTelemetry/Tracing in Planung |
+
+Weitere Architekturhinweise: [`docs/README_FULLSTACK.md`](../docs/README_FULLSTACK.md).  
+CrewAI-/PDF-Details: [`diy/PDF_GENERATION_GUIDE.md`](../diy/PDF_GENERATION_GUIDE.md).
 

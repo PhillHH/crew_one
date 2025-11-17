@@ -4,10 +4,11 @@ import ProjectForm from './components/ProjectForm';
 import LoadingModal from './components/LoadingModal';
 import SuccessModal from './components/SuccessModal';
 import ErrorModal from './components/ErrorModal';
-import { generateDIYReport, downloadPDF } from './services/api';
+import { generateDIYReport, downloadPDF, mapDIYResponseToViewModel } from './services/api';
 import { transformFormData } from './utils/validation';
 import IntakeChat from './components/IntakeChat/IntakeChat';
 import { mapRequirementToFormData } from './utils/intake';
+import uiStrings from './uiStrings';
 
 function App() {
   const formSectionRef = useRef(null);
@@ -16,12 +17,6 @@ function App() {
   const [errorMessage, setErrorMessage] = useState('');
   const [mode, setMode] = useState('manual');
   const [prefilledData, setPrefilledData] = useState(null);
-
-  useEffect(() => {
-    if (successData?.pdf_url && successData?.file_id) {
-      downloadPDF(successData.file_id);
-    }
-  }, [successData]);
 
   const handleStart = () => {
     formSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,19 +29,23 @@ function App() {
       setSuccessData(null);
 
       const requestPayload = transformFormData(formData);
-      const response = await generateDIYReport(requestPayload);
-      setSuccessData(response);
+      const viewModel = await generateDIYReport(requestPayload);
+      setSuccessData(viewModel);
       setPrefilledData(null);
     } catch (error) {
-      setErrorMessage(error.message || 'Unbekannter Fehler. Bitte versuche es erneut.');
+      setErrorMessage(error.message || uiStrings.errors.generic);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownload = (fileId) => {
-    if (!fileId) return;
-    downloadPDF(fileId);
+  const handleDownload = async () => {
+    if (!successData?.fileId) return;
+    try {
+      await downloadPDF(successData.fileId);
+    } catch (error) {
+      setErrorMessage(error.message || uiStrings.errors.generic);
+    }
   };
 
   const handleReset = () => {
@@ -61,10 +60,8 @@ function App() {
   };
 
   const handleIntakeComplete = ({ requirement, response }) => {
-    setSuccessData({
-      ...response,
-      requirement,
-    });
+    const viewModel = mapDIYResponseToViewModel(response);
+    setSuccessData(viewModel);
   };
 
   const handleRequirementPrefill = (requirement) => {
@@ -86,13 +83,13 @@ function App() {
         <section className="max-w-4xl mx-auto mb-10">
           <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
             <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wide">
-              Projektstart
+              {uiStrings.app.sectionLabel}
             </p>
             <h2 className="text-2xl font-semibold text-gray-800 mt-2">
-              Wie möchtest du dein DIY-Projekt beschreiben?
+              {uiStrings.app.sectionTitle}
             </h2>
             <p className="text-gray-500 mt-1">
-              Du kannst entweder das bewährte Formular nutzen oder dir vom Intake-Agenten helfen lassen.
+              {uiStrings.app.sectionSubtitle}
             </p>
 
             <div className="grid md:grid-cols-2 gap-4 mt-6">
@@ -108,9 +105,11 @@ function App() {
                   checked={mode === 'manual'}
                   onChange={() => handleModeChange('manual')}
                 />
-                <p className="text-lg font-semibold text-gray-800">Ich weiß genau, was ich will</p>
+                <p className="text-lg font-semibold text-gray-800">
+                  {uiStrings.app.modeManualTitle}
+                </p>
                 <p className="text-sm text-gray-500">
-                  Klassischer Formularablauf mit allen Optionen für Lieferung & Support.
+                  {uiStrings.app.modeManualDescription}
                 </p>
               </label>
 
@@ -127,10 +126,10 @@ function App() {
                   onChange={() => handleModeChange('intake')}
                 />
                 <p className="text-lg font-semibold text-gray-800">
-                  Ich brauche Hilfe bei der Spezifizierung
+                  {uiStrings.app.modeIntakeTitle}
                 </p>
                 <p className="text-sm text-gray-500">
-                  AI-Projektberater stellt Rückfragen und erstellt automatisch die finale Anfrage.
+                  {uiStrings.app.modeIntakeDescription}
                 </p>
               </label>
             </div>

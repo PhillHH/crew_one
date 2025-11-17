@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import uiStrings from '../../uiStrings';
 
 const EXAMPLES = [
   'Eine Wand mit dunkler Tapete tapezieren (15 m²)',
@@ -9,25 +10,27 @@ const EXAMPLES = [
 
 export default function ProjectDescriptionStep({ register, errors, watch, setValue }) {
   const description = watch('projectDescription');
+  const { project } = uiStrings.projectForm.steps;
 
   return (
     <div className="space-y-6">
       <div>
         <label className="block text-lg font-semibold text-gray-800 mb-2">
-          Beschreibe dein Projekt
+          {project.fieldLabel}
         </label>
         <p className="text-sm text-gray-500 mb-4">
-          Je genauer du dein Vorhaben beschreibst, desto präziser wird deine Anleitung.
-          Erwähne Maße, Materialien oder besondere Herausforderungen.
+          {project.fieldDescription}
         </p>
         <textarea
           {...register('projectDescription')}
           rows={6}
           className="input-field resize-none"
-          placeholder="Beispiel: Ich möchte in meinem Wohnzimmer eine 3,5 m breite Wand mit einer dunkelroten englischen Papiertapete tapezieren. Die Wand ist 2,5 m hoch. Ich habe schon einmal tapeziert, bin mir aber unsicher bei Rapporten und Untergrundvorbereitung."
+          placeholder={project.placeholder}
         />
         <div className="flex justify-between text-sm text-gray-500 mt-2">
-          <span>{description?.length || 0} / 2000 Zeichen</span>
+          <span>
+            {description?.length || 0} / 2000 {project.charCountSuffix}
+          </span>
           {errors.projectDescription && (
             <span className="text-red-500">{errors.projectDescription.message}</span>
           )}
@@ -35,7 +38,9 @@ export default function ProjectDescriptionStep({ register, errors, watch, setVal
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Schnellstart-Beispiele</h3>
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+          {project.examplesTitle}
+        </h3>
         <div className="flex flex-wrap gap-2">
           {EXAMPLES.map((example) => (
             <button

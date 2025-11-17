@@ -13,7 +13,8 @@ Der Code befindet sich vollständig unter `frontend/`.
 | Framework | React 18, Hooks | ausschließlich Funktionskomponenten |
 | Styling | Tailwind CSS + `globals.css` | Utility-First, zentrale Button/Card-Klassen |
 | Form | react-hook-form + Zod | Schema lebt in `src/utils/validation.js` |
-| HTTP | axios | Wrapper-Funktionen in `src/services/api.js` |
+| HTTP | axios + Fetch | `services/api.js` (Formular/ViewModel) & `services/intake.ts` (SSE) |
+| Texte | `uiStrings.ts` | Zentrale deutsche Strings für Hero, Form, Intake, Modals, Fehler |
 
 ```
 frontend/
@@ -30,6 +31,7 @@ frontend/
 │   │   └── ErrorModal.jsx
 │   ├── services/api.js
 │   ├── utils/validation.js
+│   ├── uiStrings.ts
 │   └── styles/globals.css
 └── README.md (projektbezogenes Setup)
 ```
@@ -37,10 +39,10 @@ frontend/
 ## 3. Datenfluss
 
 1. `Hero` scrollt den Nutzer zum Formular (`handleStart` in `App.jsx`).
-2. `ProjectForm` verwaltet den Stepper, ruft bei Submit `onSubmit` aus `App.jsx` auf.
-3. `transformFormData` (Zod) mappt UI-Felder auf das Backend-Schema.
-4. `generateDIYReport` sendet den Request, `LoadingModal` blockiert währenddessen.
-5. `SuccessModal` bietet Download + Statushinweise, `ErrorModal` deckt `catch`-Branches ab.
+2. `ProjectForm` verwaltet den Stepper, `transformFormData` mappt UI-Felder auf das Backend-Schema.
+3. `generateDIYReport()` ruft `/api/generate` auf und liefert ein enttechnisiertes ViewModel (`{ message, canDownload, canEmail, fileId, hasSupportRequest }`).
+4. `App.jsx` speichert dieses ViewModel, `LoadingModal` blockiert währenddessen, `SuccessModal`/`ErrorModal` zeigen nur Texte aus `uiStrings`.
+5. `downloadPDF()` lädt per `fetch + blob()` und vergibt immer den Dateinamen `DIY-Report.pdf`.
 
 ```1:45:frontend/src/App.jsx
   const handleSubmit = async (formData) => {
@@ -80,17 +82,26 @@ frontend/
 
 ## 6. API-Layer
 
-```1:46:frontend/src/services/api.js
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000',
+```ts
+const api = axios.create({ baseURL: API_BASE });
+
+export const mapDIYResponseToViewModel = (data) => ({
+  success: !!data?.success,
+  message: data?.message || '',
+  canDownload: !!data?.pdf_url,
+  canEmail: !!data?.email_sent,
+  fileId: data?.file_id || null,
+  hasSupportRequest: !!data?.support_request_id,
 });
 
-export const downloadPDF = (fileId) => {
-  window.location.href = `/api/download/${fileId}`; // TODO: auf fetch/Blob umstellen
+export const downloadPDF = async (fileId) => {
+  const response = await fetch(`${API_BASE}/api/download/${fileId}`);
+  const blob = await response.blob();
+  // Blob → DIY-Report.pdf
 };
 ```
 
-- Fehlerbehandlung: axios wirft Exceptions, die bis `App.jsx` durchgereicht werden. Für granularere UX (z. B. Validation vs. Server Down) können wir `error.response?.status` auswerten.
+- Fehlerbehandlung: `mapAxiosErrorToMessage()` wertet HTTP-Status (422/4xx/5xx) sowie Netzwerkfehler aus und liefert human-readable Texte aus `uiStrings.errors`.
 
 ## 7. Build- & Dev-Kommandos
 
@@ -110,15 +121,15 @@ Docker-Pipeline: siehe `frontend/Dockerfile` (Node-Build + Nginx). Für externe 
 | --- | --- | --- |
 | Tests | keine automatisierten Tests | React Testing Library (Formflow), Cypress/Playwright (E2E) |
 | Accessibility | Fokusführungen vorhanden, aber nicht geprüft | ARIA-Labels, Tastaturnavigation testen |
-| State Mgmt | Lokal in `App.jsx` | Bei Skalierung (mehr Features) erwägen: Zustand in Context oder Zustandmaschine |
-| Error UX | Generischer Text | Differenzierte Meldungen (z. B. Validation vs. Timeout), Retry-Buttons |
-| i18n | Strings hardcodiert | Strings kapseln (z. B. simple Dictionary) |
+| State Mgmt | Lokal in `App.jsx` | Bei Skalierung (mehr Features) ggf. Context oder Zustandmaschine |
+| Error UX | Statuscode-Mapping + `uiStrings.errors` aktiv | Retry-Aktionen, Inline-Hinweise je Feld |
+| i18n | Zentrales deutsches Dictionary (`uiStrings.ts`) | Mehrsprachigkeit vorbereiten |
 
 ## 9. Zusammenarbeit mit Backend & CrewAI
 
 - Schema-Vertrag: `frontend/src/utils/validation.js` ↔ `backend/models/schemas.py`. Änderungen immer beidseitig pflegen.
-- `SuccessModal` erwartet Felder `pdf_url`, `file_id`, `email_sent`, `support_request_id` – diese werden im Backend erzeugt (`DIYResponse`).
-- PDF-Downloads: Während `downloadPDF()` derzeit `window.location` nutzt, kann perspektivisch ein Streaming-Download mit Progressbar nachgerüstet werden.
+- `generateDIYReport()` mappt den Backend-Response (`DIYResponse`) in ein ViewModel; `SuccessModal`/`ErrorModal` zeigen nur Texte aus `uiStrings`.
+- PDF-Downloads laufen bereits über `fetch + blob()`; Dateiname: `DIY-Report.pdf`.
 
 ## 10. Ressourcen & weitere Doku
 

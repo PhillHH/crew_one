@@ -10,9 +10,7 @@ import {
 } from '../../types/intake';
 import { finalizeIntake, streamIntakeChat } from '../../services/intake';
 import { formatRequirementSummary } from '../../utils/intake';
-
-const INITIAL_ASSISTANT =
-  'Hallo! Ich helfe dir, dein DIY-Projekt zu spezifizieren. Erzähle mir kurz, was du vorhast.';
+import uiStrings from '../../uiStrings';
 
 type IntakeChatProps = {
   onComplete: (result: IntakeResult) => void;
@@ -28,7 +26,7 @@ export default function IntakeChat({
   onPrefill,
 }: IntakeChatProps) {
   const [history, setHistory] = useState<IntakeTurn[]>([
-    { role: 'assistant', content: INITIAL_ASSISTANT },
+    { role: 'assistant', content: uiStrings.intakeChat.initialAssistant },
   ]);
   const [draft, setDraft] = useState<DIYRequirementDraft | null>(null);
   const [status, setStatus] = useState<IntakeChatStatus>({});
@@ -39,6 +37,7 @@ export default function IntakeChat({
   const [proposal, setProposal] = useState<DIYRequirement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const latestDraftRef = useRef<DIYRequirementDraft | null>(null);
+  const { intakeChat } = uiStrings;
 
   useEffect(() => {
     if (listRef.current) {
@@ -46,15 +45,34 @@ export default function IntakeChat({
     }
   }, [history, streamingMessage]);
 
+  const LABELS: Record<string, string> = {
+    project_goal: 'Projektziel',
+    current_state: 'Ausgangslage',
+    dimensions: 'Maße/Fläche',
+    surface_details: 'Oberfläche/Untergrund',
+    materials: 'Material/Stil',
+    finish_preference: 'Finish/Look',
+    environment: 'Einsatzort',
+    indoor_outdoor: 'Indoor/Outdoor',
+    style_reference: 'Stilreferenz',
+    tools_available: 'Vorhandene Werkzeuge',
+    skill_level: 'Erfahrungslevel',
+    experience_notes: 'Zusatz zur Erfahrung',
+    budget: 'Budgetrahmen',
+    timeline: 'Zeitplan',
+    special_considerations: 'Besondere Hinweise',
+  };
+
   const requirementEntries = useMemo(() => {
     if (!draft) return [];
     return Object.entries(draft)
       .filter(([_, value]) => value !== undefined && value !== null && value !== '')
       .map(([key, value]) => {
+        const label = LABELS[key] ?? key;
         if (Array.isArray(value)) {
-          return [key, value.join(', ')];
+          return [label, value.join(', ')];
         }
-        return [key, value];
+        return [label, value];
       });
   }, [draft]);
 
@@ -62,7 +80,7 @@ export default function IntakeChat({
     async (requirement: DIYRequirementDraft | null) => {
       if (!requirement || isFinalizing) {
         if (!requirement) {
-          onError('Keine vollständige Anforderung verfügbar.');
+          onError(uiStrings.errors.noRequirementAvailable);
         }
         return;
       }
@@ -76,7 +94,7 @@ export default function IntakeChat({
         });
       } catch (error) {
         console.error(error);
-        onError((error as Error).message || 'Finalisierung fehlgeschlagen.');
+        onError((error as Error).message || uiStrings.errors.intakeFinalize);
       } finally {
         setIsFinalizing(false);
         onLoadingChange?.(false);
@@ -136,7 +154,7 @@ export default function IntakeChat({
       }
     } catch (error) {
       console.error(error);
-      onError((error as Error).message || 'Streaming fehlgeschlagen.');
+      onError((error as Error).message || uiStrings.errors.intakeStreaming);
     } finally {
       setStreamingMessage('');
       setIsStreaming(false);
@@ -151,7 +169,7 @@ export default function IntakeChat({
   };
 
   const handleReset = () => {
-    setHistory([{ role: 'assistant', content: INITIAL_ASSISTANT }]);
+    setHistory([{ role: 'assistant', content: intakeChat.initialAssistant }]);
     setDraft(null);
     setStatus({});
     setStreamingMessage('');
@@ -173,9 +191,11 @@ export default function IntakeChat({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-semibold text-gray-800">AI Intake-Chat</h3>
+          <h3 className="text-2xl font-semibold text-gray-800">
+            {intakeChat.title}
+          </h3>
           <p className="text-gray-500">
-            Der Projektberater sammelt alle Details, bevor deine Anleitung erstellt wird.
+            {intakeChat.subtitle}
           </p>
         </div>
         <button
@@ -185,7 +205,7 @@ export default function IntakeChat({
           disabled={isStreaming || isFinalizing}
         >
           <RefreshCw className="w-4 h-4" />
-          Neustart
+          {intakeChat.resetButton}
         </button>
       </div>
 
@@ -223,7 +243,7 @@ export default function IntakeChat({
             <div className="relative">
               <textarea
                 className="w-full border border-gray-200 rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-200 resize-none"
-                placeholder="Beschreibe dein Projekt oder stelle eine Frage..."
+                placeholder={intakeChat.inputPlaceholder}
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyDown}
@@ -241,26 +261,28 @@ export default function IntakeChat({
             </div>
             {status.missing_fields && status.missing_fields.length > 0 && (
               <p className="text-xs text-gray-500 mt-2">
-                Offene Felder: {status.missing_fields.join(', ')}
+                {intakeChat.openFieldsLabel} Einige Angaben fehlen noch.
               </p>
             )}
             {status.message && !status.is_complete && (
-              <p className="text-xs text-gray-400 mt-1">Nächste Frage: {status.message}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {intakeChat.nextQuestionLabel} {status.message}
+              </p>
             )}
           </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
           <div>
-            <h4 className="text-lg font-semibold text-gray-800">Anforderungs-Entwurf</h4>
+            <h4 className="text-lg font-semibold text-gray-800">{intakeChat.draftTitle}</h4>
             <p className="text-sm text-gray-500">
-              Live-Überblick über alle Informationen, die der Agent gesammelt hat.
+              {intakeChat.draftSubtitle}
             </p>
           </div>
 
           <div className="space-y-3 max-h-72 overflow-y-auto">
             {requirementEntries.length === 0 && (
-              <p className="text-sm text-gray-500">Noch keine Details vorhanden.</p>
+              <p className="text-sm text-gray-500">{intakeChat.draftEmpty}</p>
             )}
             {requirementEntries.map(([key, value]) => (
               <div key={key} className="border border-gray-100 rounded-xl px-3 py-2">

@@ -1,24 +1,28 @@
+import uiStrings from '../../uiStrings';
+
 export default function ContactStep({ register, errors }) {
+  const { contact } = uiStrings.projectForm.steps;
+
   return (
     <div className="space-y-6">
       <div>
         <label className="block text-lg font-semibold text-gray-800 mb-2">
-          Wie können wir dich erreichen?
+          {contact.label}
         </label>
         <p className="text-sm text-gray-500 mb-4">
-          Wir senden dir deine Anleitung per E-Mail und kontaktieren dich bei Rückfragen zu Support-Leistungen.
+          {contact.contactIntro}
         </p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Name
+            {contact.nameLabel}
           </label>
           <input
             type="text"
             {...register('name')}
-            placeholder="Max Mustermann"
+            placeholder={contact.namePlaceholder}
             className="input-field"
           />
           {errors.name && (
@@ -28,12 +32,12 @@ export default function ContactStep({ register, errors }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            E-Mail-Adresse
+            {contact.emailLabel}
           </label>
           <input
             type="email"
             {...register('email')}
-            placeholder="max.mustermann@example.com"
+            placeholder={contact.emailPlaceholder}
             className="input-field"
           />
           {errors.email && (
@@ -43,19 +47,19 @@ export default function ContactStep({ register, errors }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Telefonnummer
+            {contact.phoneLabel}
           </label>
           <input
             type="tel"
             {...register('phone')}
-            placeholder="+49 151 12345678"
+            placeholder={contact.phonePlaceholder}
             className="input-field"
           />
           {errors.phone && (
             <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
           )}
           <p className="text-xs text-gray-400 mt-1">
-            Format: +49..., 0049... oder 0... (nur Ziffern, keine Sonderzeichen)
+            {contact.phoneHint}
           </p>
         </div>
       </div>

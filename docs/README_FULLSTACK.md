@@ -1,11 +1,11 @@
 # DIY CrewAI – Betriebs- & Skalierungsdokumentation
 
 > **Zielgruppe:** Entwickler:innen & DevOps, die das Projekt übernehmen oder horizontal skalieren wollen.  
-> **Single Source of Truth:** Dieses Dokument beschreibt den Gesamtverbund. Spezialthemen werden über die Dokumentationsmatrix am Ende verlinkt.
+> **Hinweis:** Das Repository-Root (`/README.md`) enthält ein Navigations-Manual; hier findest du den ausführlichen Fullstack-Überblick.
 
 ## 1. TL;DR – Was ist produktiv?
 
-- **Frontend:** React + Vite + Tailwind (`frontend/`), Multi-Step-Formular **oder** AI-Intake-Chat (`frontend/src/components/IntakeChat/IntakeChat.tsx`), ruft die Backend-API via `frontend/src/services/api.js` bzw. `frontend/src/services/intake.ts` auf.
+- **Frontend:** React + Vite + Tailwind (`frontend/`). Multi-Step-Formular **oder** AI-Intake-Chat; UI-Texte kommen aus `uiStrings.ts`, Responses werden in ein ViewModel gemappt (keine technischen IDs im UI). API-Aufrufe laufen über `services/api.js` bzw. `services/intake.ts`.
 - **Backend:** FastAPI (`backend/`), orchestriert CrewAI-Aufrufe, Intake-Agent (`/intake/...`), verschickt E-Mails und verwaltet Support-Requests.
 - **CrewAI-Paket:** Python (`diy/src/diy/`), generiert Markdown-Reports und PDFs (WeasyPrint).
 - **Persistenz:** PostgreSQL (Docker-Service `db`), Datei-Ausgaben unter `diy/outputs/`.
@@ -86,12 +86,16 @@ npm run dev --prefix frontend      # lauscht auf http://localhost:5173
 
 ### Frontend
 - Komponentenbaum und Zustandslogik siehe `docs/FRONTEND_IMPLEMENTATION_GUIDE.md`.
-- Validierung via Zod (`frontend/src/utils/validation.js`) spiegelt 1:1 das Backend-Schema, inkl. Pflichtfelder für Kontakt.
+- Validierung via Zod (`frontend/src/utils/validation.js`) spiegelt 1:1 das Backend-Schema.
+- Enttechnisierung:
+  - `frontend/src/uiStrings.ts` hält sämtliche UI-Texte (Hero, Formular, Intake-Chat, Modals, Fehlertexte).
+  - `frontend/src/services/api.js` mappt `DIYResponse` in ein ViewModel (`{ message, canDownload, canEmail, fileId, hasSupportRequest }`), das Success-/Error-UI nutzt.
+  - `downloadPDF()` arbeitet über `fetch + blob()` und vergibt immer den Dateinamen `DIY-Report.pdf`.
 - AI-Intake-Modus:
-  - Toggle/State in `frontend/src/App.jsx`
-  - `frontend/src/components/IntakeChat/IntakeChat.tsx` bündelt maximal drei Runden, zeigt Vorschläge im rechten Panel, erlaubt zwei Refinement-Schleifen und bietet Buttons für „ins Formular übernehmen“ oder „direkt finalisieren“.
+  - Toggle/State in `frontend/src/App.jsx`.
+  - `frontend/src/components/IntakeChat/IntakeChat.tsx` bündelt maximal drei Runden, rendert nur Klartext-Bubbles mit strukturierten Labels und zeigt Vorschläge im rechten Panel.
   - Typisierte API-Wrapper (`frontend/src/services/intake.ts`) kapseln SSE-Handling + optionalen Finalize-Call.
-- To-do-Liste für UI-Optimierungen ist im Guide dokumentiert (z. B. visuelle Tests, responsives Verhalten).
+- Offene UI/UX-Aufgaben (Visueller Test, Responsivität) siehe Frontend-Guide.
 
 ### Backend
 - FastAPI-App in `backend/main.py` bindet DIY- sowie Intake-Router und initialisiert DB + CORS.
@@ -149,12 +153,13 @@ curl http://localhost:8000/api/health  # Healthcheck
 
 | Dokument | Zweck |
 | --- | --- |
+| `README.md` (Repo-Root) | Projektmanual & Navigationshilfe |
 | `docs/README_FULLSTACK.md` (dies) | Gesamtarchitektur, Betrieb, Skalierung |
-| `architektur.md` | Schneller Überblick über Verzeichnisstruktur & Duplikat-Bereinigung |
-| `docs/FRONTEND_IMPLEMENTATION_GUIDE.md` | Komponentenarchitektur, Stilrichtlinien, UI-Backlog |
-| `docs/IMPLEMENTATION_SUMMARY.md` | Kurzchronik wichtiger Implementierungs-Meilensteine (z. B. WeasyPrint) |
-| `diy/PDF_GENERATION_GUIDE.md` | Tiefgehender Leitfaden für PDF-/Template-Entwicklung |
-| `frontend/README.md`, `backend/README.md`, `diy/README.md` | Feingranulare Befehle/Envs für jedes Teilprojekt |
+| `architektur.md` | Überblick über Ordner & Assets |
+| `docs/FRONTEND_IMPLEMENTATION_GUIDE.md` | Komponentenarchitektur, Styling, Intake-Flow |
+| `docs/IMPLEMENTATION_SUMMARY.md` | Historie wichtiger Implementierungen |
+| `diy/PDF_GENERATION_GUIDE.md` | Leitfaden für PDF-/Template-Entwicklung |
+| `frontend/README.md`, `backend/README.md`, `diy/README.md` | Setup & Befehle je Teilprojekt |
 
 ## 8. Contribution & Roadmap
 

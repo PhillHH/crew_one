@@ -1,25 +1,20 @@
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
-const MESSAGES = [
-  '🤖 KI erstellt deine Anleitung ...',
-  '📝 Sicherheitshinweise werden zusammengestellt ...',
-  '🛒 Einkaufsliste wird optimiert ...',
-  '✨ PDF wird finalisiert ...',
-];
+import uiStrings from '../uiStrings';
 
 export default function LoadingModal({ isOpen }) {
   const [messageIndex, setMessageIndex] = useState(0);
+  const messages = uiStrings.loading.mainMessages;
 
   useEffect(() => {
     if (!isOpen) return;
     setMessageIndex(0);
     const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
+      setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, messages.length]);
 
   if (!isOpen) return null;
 
@@ -30,13 +25,13 @@ export default function LoadingModal({ isOpen }) {
           <Loader2 className="w-16 h-16 text-primary animate-spin-slow" />
         </div>
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-          Deine Anleitung wird erstellt
+          {uiStrings.loading.title}
         </h2>
         <p className="text-lg text-gray-600 min-h-[60px] transition-opacity">
-          {MESSAGES[messageIndex]}
+          {messages[messageIndex]}
         </p>
         <p className="text-sm text-gray-400 mt-6">
-          Dieser Vorgang dauert in der Regel weniger als eine Minute.
+          {uiStrings.loading.hint}
         </p>
       </div>
     </div>

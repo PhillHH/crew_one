@@ -17,6 +17,7 @@ Stand: **November 2025**.
 | Template-System | Neue Struktur `diy/src/diy/tools/print/templates/` mit `TemplateConfig`, `PdfTemplate` und zwei CSS-Themes. | `base_template.py`, `styles/*.css` |
 | Konverter-API | `convert_markdown_to_pdf()` & `convert_report_to_pdf()` validieren Eingaben, erzeugen PDFs direkt in `diy/outputs`. | `diy/src/diy/tools/print/pdfmaker.py` |
 | CLI/Tooling | `MarkdownToPdfTool` exportiert als CrewAI-Tool; Dockerfile enthält die WeasyPrint-Libs. | `diy/src/diy/tools/__init__.py`, `Dockerfile` |
+| Frontend-Enttechnisierung | `uiStrings.ts`, ViewModel-Mapping (`services/api.js`), Blob-Download (`DIY-Report.pdf`), Intake-Chat rendert nur Klartext. | `frontend/src/*`, Docs-Nov-2025 |
 | Dokumentation | Dieser Überblick + Deep Dive in `diy/PDF_GENERATION_GUIDE.md`. | docs |
 
 ```101:135:diy/src/diy/tools/print/pdfmaker.py

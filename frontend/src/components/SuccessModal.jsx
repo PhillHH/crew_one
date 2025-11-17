@@ -1,7 +1,10 @@
 import { CheckCircle2, Download, Mail, Headphones } from 'lucide-react';
+import uiStrings from '../uiStrings';
 
 export default function SuccessModal({ isOpen, data, onClose, onDownload }) {
-  if (!isOpen) return null;
+  if (!isOpen || !data) return null;
+
+  const { successModal } = uiStrings;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
@@ -9,36 +12,36 @@ export default function SuccessModal({ isOpen, data, onClose, onDownload }) {
         <div className="text-center">
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800">
-            Deine Anleitung ist fertig! 🎉
+            {successModal.title}
           </h2>
           <p className="text-gray-600 mt-3">
-            Du kannst sie jetzt herunterladen oder in deinem Postfach abrufen.
+            {data.message || successModal.body}
           </p>
         </div>
 
         <div className="mt-6 space-y-4">
-          {data?.pdf_url && (
+          {data.canDownload && (
             <button
               type="button"
-              onClick={() => onDownload(data.file_id)}
+              onClick={onDownload}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               <Download className="w-5 h-5" />
-              PDF herunterladen
+              {successModal.downloadButton}
             </button>
           )}
 
-          {data?.email_sent && (
+          {data.canEmail && (
             <div className="flex items-center gap-3 bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm">
               <Mail className="w-5 h-5" />
-              Deine Anleitung wurde an deine E-Mail-Adresse gesendet.
+              {successModal.emailInfo}
             </div>
           )}
 
-          {data?.support_request_id && (
+          {data.hasSupportRequest && (
             <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-sm">
               <Headphones className="w-5 h-5" />
-              Support-Anfrage erstellt – ID: <strong>{data.support_request_id}</strong>
+              {successModal.supportInfoPrefix}
             </div>
           )}
         </div>
@@ -48,7 +51,7 @@ export default function SuccessModal({ isOpen, data, onClose, onDownload }) {
           onClick={onClose}
           className="btn-secondary w-full mt-6"
         >
-          Neues Projekt starten
+          {successModal.newProjectButton}
         </button>
       </div>
     </div>

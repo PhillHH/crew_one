@@ -9,6 +9,7 @@ import DeliveryStep from './DeliveryStep';
 import SupportStep from './SupportStep';
 import ContactStep from './ContactStep';
 import { diyFormSchema } from '../../utils/validation';
+import uiStrings from '../../uiStrings';
 
 const DEFAULT_VALUES = {
   projectDescription: '',
@@ -152,10 +153,10 @@ export default function ProjectForm({ onSubmit, prefilledData = null }) {
       <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
         <header className="mb-8">
           <h2 className="text-3xl font-semibold text-gray-800 mb-2">
-            Erzähle uns von deinem Projekt
+            {uiStrings.projectForm.headerTitle}
           </h2>
           <p className="text-gray-500">
-            In wenigen Schritten zur maßgeschneiderten DIY-Anleitung – inklusive Einkaufsliste und Sicherheits-Check.
+            {uiStrings.projectForm.headerSubtitle}
           </p>
         </header>
 
@@ -171,7 +172,7 @@ export default function ProjectForm({ onSubmit, prefilledData = null }) {
               className="btn-secondary flex items-center justify-center gap-2 md:w-auto"
               disabled={isFirstStep || isSubmitting}
             >
-              <ArrowLeft className="w-4 h-4" /> Zurück
+              <ArrowLeft className="w-4 h-4" /> {uiStrings.projectForm.backButton}
             </button>
 
             <div className="flex-1" />
@@ -183,7 +184,7 @@ export default function ProjectForm({ onSubmit, prefilledData = null }) {
                 className="btn-primary flex items-center justify-center gap-2 md:w-auto"
                 disabled={isSubmitting}
               >
-                Weiter <ArrowRight className="w-4 h-4" />
+                {uiStrings.projectForm.nextButton} <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <button
@@ -191,7 +192,13 @@ export default function ProjectForm({ onSubmit, prefilledData = null }) {
                 className="btn-primary flex items-center justify-center gap-2 md:w-auto"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Wird gesendet ...' : (<><Check className="w-5 h-5" /> Anleitung erstellen</>)}
+                {isSubmitting
+                  ? uiStrings.projectForm.submitLoading
+                  : (
+                    <>
+                      <Check className="w-5 h-5" /> {uiStrings.projectForm.submitLabel}
+                    </>
+                  )}
               </button>
             )}
           </div>
