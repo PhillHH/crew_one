@@ -59,13 +59,13 @@ function App() {
     setSuccessData(null);
   };
 
-  const handleIntakeComplete = ({ requirement, response }) => {
+  const handleIntakeComplete = ({ response }) => {
     const viewModel = mapDIYResponseToViewModel(response);
     setSuccessData(viewModel);
   };
 
-  const handleRequirementPrefill = (requirement) => {
-    setPrefilledData(mapRequirementToFormData(requirement));
+  const handleRequirementPrefill = (description) => {
+    setPrefilledData({ projectDescription: description });
     setMode('manual');
     setErrorMessage('');
     setSuccessData(null);

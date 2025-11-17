@@ -1,15 +1,12 @@
 import {
-  DIYRequirementDraft,
   IntakeChatPayload,
   IntakeChatStatus,
-  IntakeFinalizeResponse,
 } from '../types/intake';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface ChatStreamCallbacks {
   onMessage: (delta: string) => void;
-  onDraft: (draft: DIYRequirementDraft) => void;
   onStatus: (status: IntakeChatStatus) => void;
   onError: (detail: string) => void;
 }
@@ -62,8 +59,6 @@ export async function streamIntakeChat(
           const parsed = JSON.parse(payloadText);
           if (parsed.type === 'message') {
             callbacks.onMessage(parsed.delta ?? '');
-          } else if (parsed.type === 'draft') {
-            callbacks.onDraft((parsed.draft ?? {}) as DIYRequirementDraft);
           } else if (parsed.type === 'status') {
             callbacks.onStatus(parsed);
           } else if (parsed.type === 'error') {
@@ -77,25 +72,6 @@ export async function streamIntakeChat(
       boundary = buffer.indexOf('\n\n');
     }
   }
-}
-
-export async function finalizeIntake(
-  draft: DIYRequirementDraft
-): Promise<IntakeFinalizeResponse> {
-  const response = await fetch(`${API_BASE}/intake/finalize`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ requirement: draft }),
-  });
-
-  if (!response.ok) {
-    const detail = await response.json().catch(() => ({}));
-    throw new Error(detail?.detail || 'Finalisierung fehlgeschlagen.');
-  }
-
-  return response.json();
 }
 
 
