@@ -31,7 +31,7 @@ diy/
 │       ├── print/        # WeasyPrint-Konverter & Templates
 │       └── custom_tool.py
 ├── outputs/              # Markdown- und PDF-Ergebnisse
-└── README.md             # dieses Dokument
+└── README.md             # dieses Dokument hhh
 ```
 
 ---
