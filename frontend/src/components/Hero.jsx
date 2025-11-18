@@ -5,7 +5,18 @@ export default function Hero({ onStart }) {
   const { hero } = uiStrings;
 
   return (
-    <section className="bg-gradient-to-r from-primary via-purple-700 to-accent text-white py-20">
+    <section className="relative bg-gradient-to-r from-primary via-purple-700 to-accent text-white py-20">
+      <div className="absolute top-4 left-4 text-xs text-white/80">
+        An AI Agent prototype by Phillip Rugullis for{' '}
+        <a
+          href="https://growento.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-white"
+        >
+          Growento.com
+        </a>
+      </div>
       <div className="container mx-auto px-6 text-center max-w-5xl">
         <div className="mb-10">
           <span className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm font-medium">

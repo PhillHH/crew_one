@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import Footer from './components/Footer';
 import Hero from './components/Hero';
 import ProjectForm from './components/ProjectForm';
 import LoadingModal from './components/LoadingModal';
@@ -159,6 +160,7 @@ function App() {
         message={errorMessage}
         onClose={handleReset}
       />
+      <Footer />
     </div>
   );
 }
