@@ -1,14 +1,10 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from crewai.tools import tool  # Tools registrieren
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 
-# Beispiel-Tool: Websuche
-@tool("web_search_tool")
-def web_search_tool(query: str) -> str:
-    """Durchsucht das Web nach Informationen zu einem Thema (Mock-Beispiel)."""
-    return f"Ergebnisse zur Websuche für '{query}' (Beispielausgabe)."
+from diy.tools import bauhaus_search
+
 
 @CrewBase
 class Diy():
@@ -23,7 +19,7 @@ class Diy():
         return Agent(
             config=self.agents_config['researcher_general'],  # YAML-Agent
             verbose=True,
-            tools=[web_search_tool],  # Tool hinzufügen
+            tools=[bauhaus_search],
         )
 
     @agent
