@@ -1,0 +1,393 @@
+/* ==========================================
+   PROFESSIONAL PDF THEME - Corporate Design
+   ========================================== */
+
+/* ===== PAGE SETUP ===== */
+@page {
+    size: A4;
+    margin: 3cm 2.5cm;
+    
+    @top-left {
+        content: string(doc-title);
+        font-family: 'DejaVu Serif', 'Liberation Serif', 'Times New Roman', serif;
+        font-size: 9pt;
+        color: #4a5568;
+        font-weight: bold;
+    }
+    
+    @top-right {
+        content: string(doc-date);
+        font-family: 'DejaVu Serif', 'Liberation Serif', 'Times New Roman', serif;
+        font-size: 8pt;
+        color: #718096;
+    }
+    
+    @bottom-center {
+        content: counter(page);
+        font-family: 'DejaVu Serif', 'Liberation Serif', 'Times New Roman', serif;
+        font-size: 10pt;
+        color: #2d3748;
+        font-weight: bold;
+    }
+}
+
+@page :first {
+    margin-top: 1cm;
+    
+    @top-left {
+        content: none;
+    }
+    
+    @top-right {
+        content: none;
+    }
+}
+
+/* ===== TYPOGRAPHY ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'DejaVu Serif', 'Liberation Serif', 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.8;
+    color: #1a202c;
+    background: white;
+}
+
+/* ===== HEADINGS ===== */
+h1 {
+    color: #1a202c;
+    font-size: 26pt;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 20pt;
+    padding: 16pt 0;
+    text-align: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 2pt;
+    page-break-after: avoid;
+    string-set: doc-title content();
+}
+
+h2 {
+    color: #2d3748;
+    font-size: 18pt;
+    font-weight: bold;
+    margin-top: 28pt;
+    margin-bottom: 14pt;
+    padding-bottom: 6pt;
+    border-bottom: 2pt solid #667eea;
+    page-break-after: avoid;
+}
+
+h3 {
+    color: #4a5568;
+    font-size: 15pt;
+    font-weight: bold;
+    margin-top: 20pt;
+    margin-bottom: 12pt;
+    padding-left: 12pt;
+    border-left: 3pt solid #a0aec0;
+    page-break-after: avoid;
+}
+
+h4 {
+    color: #4a5568;
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 16pt;
+    margin-bottom: 10pt;
+    page-break-after: avoid;
+}
+
+h5, h6 {
+    color: #718096;
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 14pt;
+    margin-bottom: 8pt;
+    font-style: italic;
+    page-break-after: avoid;
+}
+
+/* ===== PARAGRAPHS ===== */
+p {
+    margin-bottom: 14pt;
+    text-align: justify;
+    orphans: 4;
+    widows: 4;
+    hyphens: auto;
+}
+
+p:first-of-type::first-letter {
+    font-size: 32pt;
+    font-weight: bold;
+    float: left;
+    line-height: 1;
+    margin-right: 8pt;
+    color: #667eea;
+}
+
+/* ===== LISTS ===== */
+ul, ol {
+    margin-left: 28pt;
+    margin-bottom: 14pt;
+    padding-left: 0;
+}
+
+li {
+    margin-bottom: 8pt;
+    line-height: 1.7;
+}
+
+ul > li::marker {
+    color: #667eea;
+    font-size: 14pt;
+}
+
+ol > li::marker {
+    color: #667eea;
+    font-weight: bold;
+}
+
+ul ul, ol ol, ul ol, ol ul {
+    margin-top: 8pt;
+    margin-bottom: 8pt;
+}
+
+/* ===== LINKS ===== */
+a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* ===== CODE BLOCKS ===== */
+code {
+    font-family: 'DejaVu Sans Mono', 'Liberation Mono', 'Courier New', monospace;
+    background-color: #edf2f7;
+    padding: 3pt 7pt;
+    border-radius: 3pt;
+    font-size: 9.5pt;
+    color: #2d3748;
+    border: 1pt solid #cbd5e0;
+}
+
+pre {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    color: #e2e8f0;
+    padding: 16pt;
+    border-radius: 6pt;
+    overflow-x: auto;
+    margin: 18pt 0;
+    border-left: 4pt solid #667eea;
+    page-break-inside: avoid;
+    box-shadow: 0 4pt 6pt rgba(0, 0, 0, 0.1);
+}
+
+pre code {
+    background: none;
+    color: #e2e8f0;
+    padding: 0;
+    border: none;
+    font-size: 9pt;
+}
+
+/* ===== TABLES ===== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20pt 0;
+    page-break-inside: avoid;
+    box-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.05);
+}
+
+thead {
+    display: table-header-group;
+}
+
+th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12pt;
+    text-align: left;
+    font-weight: bold;
+    border: none;
+}
+
+td {
+    border: 1pt solid #e2e8f0;
+    padding: 10pt;
+}
+
+tr:nth-child(even) {
+    background-color: #f7fafc;
+}
+
+tr:hover {
+    background-color: #edf2f7;
+}
+
+/* ===== HORIZONTAL RULES ===== */
+hr {
+    border: none;
+    height: 2pt;
+    background: linear-gradient(to right, transparent, #667eea, transparent);
+    margin: 28pt 0;
+}
+
+/* ===== BLOCKQUOTES ===== */
+blockquote {
+    background: linear-gradient(to right, #faf5ff 0%, #ffffff 100%);
+    border-left: 5pt solid #667eea;
+    padding: 16pt 20pt;
+    margin: 20pt 0;
+    font-style: italic;
+    color: #4a5568;
+    page-break-inside: avoid;
+    box-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.05);
+}
+
+blockquote p {
+    margin-bottom: 0;
+}
+
+/* ===== IMAGES ===== */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 20pt auto;
+    page-break-inside: avoid;
+    border-radius: 4pt;
+    box-shadow: 0 4pt 6pt rgba(0, 0, 0, 0.1);
+}
+
+/* ===== HEADER & FOOTER ===== */
+.document-header {
+    margin-bottom: 32pt;
+    padding: 24pt;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 4pt;
+    text-align: center;
+}
+
+.header-logo img {
+    max-width: 150pt;
+    height: auto;
+    margin: 0 auto 12pt;
+    filter: brightness(0) invert(1);
+}
+
+.header-title {
+    font-size: 28pt;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.2);
+    string-set: doc-title content();
+}
+
+.document-footer {
+    margin-top: 40pt;
+    padding-top: 16pt;
+    border-top: 2pt solid #e2e8f0;
+    text-align: center;
+    font-size: 9pt;
+    color: #718096;
+    string-set: doc-date content();
+}
+
+/* ===== MAIN CONTENT ===== */
+.document-content {
+    min-height: 250pt;
+}
+
+/* ===== SPECIAL BOXES ===== */
+.info-box {
+    background: linear-gradient(to right, #dbeafe 0%, #ffffff 100%);
+    border-left: 5pt solid #3b82f6;
+    padding: 16pt;
+    margin: 20pt 0;
+    page-break-inside: avoid;
+    border-radius: 0 4pt 4pt 0;
+    box-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.05);
+}
+
+.warning-box {
+    background: linear-gradient(to right, #fed7aa 0%, #ffffff 100%);
+    border-left: 5pt solid #f97316;
+    padding: 16pt;
+    margin: 20pt 0;
+    page-break-inside: avoid;
+    border-radius: 0 4pt 4pt 0;
+    box-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.05);
+}
+
+.success-box {
+    background: linear-gradient(to right, #d1fae5 0%, #ffffff 100%);
+    border-left: 5pt solid #10b981;
+    padding: 16pt;
+    margin: 20pt 0;
+    page-break-inside: avoid;
+    border-radius: 0 4pt 4pt 0;
+    box-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.05);
+}
+
+.tip-box {
+    background: linear-gradient(to right, #fef3c7 0%, #ffffff 100%);
+    border-left: 5pt solid #eab308;
+    padding: 16pt;
+    margin: 20pt 0;
+    page-break-inside: avoid;
+    border-radius: 0 4pt 4pt 0;
+    box-shadow: 0 2pt 4pt rgba(0, 0, 0, 0.05);
+}
+
+/* ===== TWO-COLUMN LAYOUT (Optional) ===== */
+.two-columns {
+    column-count: 2;
+    column-gap: 24pt;
+    column-rule: 1pt solid #e2e8f0;
+}
+
+/* ===== PAGE BREAKS ===== */
+.page-break {
+    page-break-after: always;
+}
+
+.no-break {
+    page-break-inside: avoid;
+}
+
+/* ===== PRINT OPTIMIZATIONS ===== */
+@media print {
+    body {
+        background: white;
+    }
+    
+    a[href^="http"]:after {
+        content: " [" attr(href) "]";
+        font-size: 7pt;
+        color: #718096;
+        font-style: italic;
+    }
+    
+    /* Ensure colors are preserved */
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+:focus {
+    outline: 2pt solid #667eea;
+    outline-offset: 2pt;
+}
+

@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database for Support Requests
+  db:
+    image: postgres:16-alpine
+    container_name: diy_db
+    environment:
+      POSTGRES_USER: diy_user
+      POSTGRES_PASSWORD: diy_password
+      POSTGRES_DB: diy
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - diy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diy_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # CrewAI Service (existing)
+  crewai:
+    build: .
+    container_name: crewai_container
+    working_dir: /app/diy
+    tty: true
+    volumes:
+      - .:/app
+      - ./diy/outputs:/app/diy/outputs
+    networks:
+      - diy-network
+
+  # Backend API (FastAPI)
+  backend:
+    build: ./backend
+    container_name: diy_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://diy_user:diy_password@db:5432/diy
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}  
+    volumes:
+      - ./diy:/app/diy
+    depends_on:
+      db:
+        condition: service_healthy
+      crewai:
+        condition: service_started
+    networks:
+      - diy-network
+
+  # Frontend (React + Nginx)
+  frontend:
+    build: ./frontend
+    container_name: diy_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - diy-network
+
+networks:
+  diy-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

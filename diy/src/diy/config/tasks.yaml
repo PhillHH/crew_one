@@ -1,0 +1,62 @@
+planning_task:
+  description: >
+    Analysiere die Nutzeranfrage zu {topic} und leite die notwendigen Arbeitsschritte ab.
+    Erfasse, welche Art von Projekt es ist (z. B. Reparatur, Renovierung, Installation)
+    und was das Ziel der Tätigkeit ist.
+  expected_output: >
+    Eine gegliederte Übersicht aller notwendigen Schritte und Teilaufgaben,
+    um {topic} erfolgreich durchzuführen.
+  agent: researcher_general
+  output_file: 'outputs/arbeitsschritte.md'
+
+safety_task:
+  description: >
+    Führe eine gründliche Recherche zu Sicherheitsvorschriften, Risiken und regionalen Besonderheiten
+    in Bezug auf {topic} durch. Achte besonders auf typische Gefahrenquellen,
+    Schutzkleidung, Strom- oder Wasseranschlüsse, Brandgefahr und gesetzliche Vorschriften.
+  expected_output: >
+    Eine strukturierte Liste mit mindestens 5 Sicherheits- oder Vorsichtsmaßnahmen,
+    die beim Ausführen von {topic} zu beachten sind.
+  agent: researcher_safety
+  output_file: 'outputs/sicherheitshinweise.md'
+
+quality_check_task:
+  description: >
+    Prüfe die erstellte Anleitung auf inhaltliche Richtigkeit, logische Reihenfolge,
+    Vollständigkeit und sprachliche Klarheit. Achte darauf, dass keine wichtigen
+    Materialien oder Schritte fehlen.
+  expected_output: >
+    Eine kurze Bewertung (max. 200 Wörter), ob die Anleitung vollständig,
+    verständlich und korrekt ist, sowie ggf. Verbesserungsvorschläge.
+  agent: quality_manager
+  output_file: 'outputs/bewertung.md'
+
+purchasing_task:
+  description: >
+    Erstelle eine detaillierte Einkaufsliste aller benötigten Materialien, Werkzeuge
+    und Hilfsmittel, basierend auf der finalen Anleitung zu {topic}.
+    Führe zu jedem Artikel 1–2 konkrete Produktvorschläge mit Preis, Link und Menge auf.
+  expected_output: >
+    Eine Markdown-Tabelle mit:
+    - Produktname
+    - Kategorie (Material, Werkzeug, Zubehör)
+    - Menge
+    - Preis (geschätzt)
+    - Link zu einem Online-Baumarkt (z. B. Bauhaus, Obi, Hornbach)
+  agent: purchasing_agent
+  output_file: 'outputs/einkaufsliste.md'
+
+writing_task:
+  description: >
+    Verfasse auf Basis der bisherigen Ergebnisse eine verständliche, ausführliche
+    Do-it-yourself-Anleitung in deutscher Sprache. Die Anleitung soll Schritt-für-Schritt aufgebaut sein
+    und auch für Laien nachvollziehbar sein.
+  expected_output: >
+    Eine klar gegliederte Anleitung in Markdown-Format:
+    - Kurze Einleitung
+    - Benötigtes Werkzeug und Material
+    - Schritt-für-Schritt-Anleitung
+    - Sicherheitshinweise (integriert)
+    - Zusätzliche Tipps oder Varianten
+  agent: reporting_writer
+  output_file: 'outputs/diy_anleitung.md'
