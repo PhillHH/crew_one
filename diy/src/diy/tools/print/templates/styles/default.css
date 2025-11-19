@@ -116,6 +116,23 @@ ul ul, ol ol, ul ol, ol ul {
     margin-bottom: 6pt;
 }
 
+.toc {
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    padding: 1em;
+    margin-bottom: 2em;
+}
+
+.toc_title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+}
+
+.toc ul {
+    list-style-type: none;
+    padding-left: 1em;
+}
+
 /* ===== LINKS ===== */
 a {
     color: #4B0082;

@@ -74,26 +74,31 @@ class PdfTemplate:
         # Markdown → HTML mit Extensions
         md = markdown.Markdown(
             extensions=[
-                'extra',           # Tables, Footnotes, etc.
-                'codehilite',      # Code-Syntax-Highlighting
-                'sane_lists',      # Bessere Listen-Verarbeitung
-                'tables',          # Tabellen-Support
-                'fenced_code',     # ```code``` Blöcke
-                'toc',             # Table of Contents
-                'nl2br',           # Newline to <br>
+                'extra',
+                'codehilite',
+                'sane_lists',
+                'tables',
+                'fenced_code',
+                'toc',
+                'nl2br',
             ],
             extension_configs={
                 'codehilite': {
                     'css_class': 'highlight',
                     'linenums': False,
-                }
+                },
+                'toc': {
+                    'title': 'Inhaltsverzeichnis',
+                    'permalink': True,
+                },
             }
         )
         
         html_body = md.convert(markdown_content)
+        toc = getattr(md, 'toc', '')
         
         # Vollständiges HTML-Dokument bauen
-        return self._wrap_content(html_body)
+        return self._wrap_content(toc + html_body)
     
     def _build_header(self) -> str:
         """
